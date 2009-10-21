@@ -3,3 +3,6 @@
 
 = What is a tracker? =
 http://en.wikipedia.org/wiki/BitTorrent_tracker
+
+= Bittorrent matainfo =
+http://mediawiki.dideas.com/index.php?title=Torrent_Metafile
