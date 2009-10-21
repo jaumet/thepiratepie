@@ -1,0 +1,6 @@
+#summary One-sentence summary of this page.
+#labels torrent
+
+= What is a tracker =
+http://en.wikipedia.org/wiki/BitTorrent_tracker
+
