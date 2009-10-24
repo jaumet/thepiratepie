@@ -3,7 +3,7 @@ from urllib2 import Request, urlopen, URLError, HTTPError
 import urllib
 import urllib2
 import time
-#import MySQLdb
+import MySQLdb
 
 
 class webcrawlerTorrent():
@@ -107,6 +107,7 @@ class webcrawlerTorrent():
                     self.dbNewtorrent(tpbid,title,cat,size)
                 if storeMethod =='realtime':
                     self.recordRowTopCatItem( tpbid, cat, seeders, leechers )
+                print "%s, %s, %s" % (tpbid, seeders, leechers)
 
 # methods parsing *********************************************************************************************
 
@@ -116,7 +117,7 @@ class webcrawlerTorrent():
 
     def getTopCatPage(self, idcat ):
         url = self.url+'top/'+str(idcat)+"/"
-        self.getTPBListPage( url , 'realtime' )
+        self.getTPBListPage( url , 'none' )
 
     def recentTorrentFile(self, page):
         url = self.url+'recent/'+str(page)
@@ -135,6 +136,8 @@ class webcrawlerTorrent():
         for idcat in self.categories:
             self.getTopCatPage(idcat)
 
+tpb = webcrawlerTorrent()
+tpb.getTopCatPage(205)
 
 #tpb = webcrawlerTorrent()
 #data = tpb.getSeedersAndLeechers('5130018')
