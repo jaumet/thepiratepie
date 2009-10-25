@@ -28,9 +28,11 @@ class webcrawlerTorrent():
 		self.categories = [100,101,102,103,104,199,200,201,202,203,204,205,206,207,208,299,300,301,302,303,304,399,400,401,402,403,404,405,406,499,500,501,502,503,504,505,506,599,600,601,602,603,604,699]
 		self.subCategories = [101,102,103,104,199,201,202,203,204,205,206,207,208,299,301,302,303,304,399,401,402,403,404,405,406,499,501,502,503,504,505,506,599,601,602,603,604,699]
 
+		self.db = MySQLdb.connect(host=self.host, user=self.userDataBase, passwd=self.passwordDataBase, db=self.nameDataBase)
+
 # database *********************************************************************************************
 	
-	def recordRowTopCatItem(self, tpbid, cat, seeders, leechers):
+	"""def recordRowTopCatItem(self, tpbid, cat, seeders, leechers):
 		time =""
 		sql = "INSERT INTO "+self.tableRealtimeDataBase+" ('tpb-id','time','cat','seeders','leechers') VALUES ('"+tpbid+"','"+time+"','"+cat+"','"+seeders+"','"+leechers+"')"
 		# connect
@@ -38,16 +40,16 @@ class webcrawlerTorrent():
 		# create a cursor
 		cursor = db.cursor()
 		# execute SQL statement
-		cursor.execute(sql)
+		cursor.execute(sql)"""
 	
-	def dbNewtorrent(self,tpbid,title,cat,size, fulldescription):
+	"""def dbNewtorrent(self,tpbid,title,cat,size, fulldescription):
 		sql = "INSERT INTO "+self.tableTPB+" ('tpb-id','title','cat','size', 'fulldescription') VALUES ('"+tpbid+"','"+title+"','"+cat+"','"+size+"','"+fulldescription+"')"
 		# connect
 		db = MySQLdb.connect(host=self.host, user=self.userDataBase, passwd=self.passwordDataBase, db=self.nameDataBase)
 		# create a cursor
 		cursor = db.cursor()
 		# execute SQL statement
-		cursor.execute(sql)
+		cursor.execute(sql)"""
 
 # feed methods ******************************************************************************************
 	
@@ -140,7 +142,7 @@ class webcrawlerTorrent():
 					sql = sql + "(%s, %s, %s, %s),\n" % (sample.tpbid, sample.sampleTime, sample.seeders, sample.leechers)
 				sql = sql[0:len(sql)-2] + ";"
 				#print sql
-
+				self.db.execute(sql)
 				
 				
 			return count
