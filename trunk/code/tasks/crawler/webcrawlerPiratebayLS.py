@@ -16,9 +16,10 @@ class webcrawlerTorrent():
         self.tableRealtimeDataBase = "realtimeTPB"
         self.tableTPB = "tpb"
         self.categories = [100,101,102,103,104,199,200,201,202,203,204,205,206,207,208,299,300,301,302,303,304,399,400,401,402,403,404,405,406,499,500,501,502,503,504,505,506,599,600,601,602,603,604,699]
+        self.subCategories = [101,102,103,104,199,201,202,203,204,205,206,207,208,299,301,302,303,304,399,401,402,403,404,405,406,499,501,502,503,504,505,506,599,601,602,603,604,699]
 
 # database *********************************************************************************************
-
+    
     def recordRowTopCatItem(self, tpbid, cat, seeders, leechers):
         time =""
         sql = "INSERT INTO "+self.tableRealtimeDataBase+" ('tpb-id','time','cat','seeders','leechers') VALUES ('"+tpbid+"','"+time+"','"+cat+"','"+seeders+"','"+leechers+"')"
@@ -28,7 +29,7 @@ class webcrawlerTorrent():
         cursor = db.cursor()
         # execute SQL statement
         cursor.execute(sql)
-
+    
     def dbNewtorrent(self,tpbid,title,cat,size, fulldescription):
         sql = "INSERT INTO "+self.tableTPB+" ('tpb-id','title','cat','size', 'fulldescription') VALUES ('"+tpbid+"','"+title+"','"+cat+"','"+size+"','"+fulldescription+"')"
         # connect
@@ -37,9 +38,9 @@ class webcrawlerTorrent():
         cursor = db.cursor()
         # execute SQL statement
         cursor.execute(sql)
-        
-# feed methods ******************************************************************************************
 
+# feed methods ******************************************************************************************
+    
     def getTPBTorrentPage(self, url, storeMethod, tpbid):
         try:
             response = urllib2.urlopen(url)
@@ -53,7 +54,7 @@ class webcrawlerTorrent():
         # everything is fine
             page = response.read()
             print page
-            #dom = BeautifulSoup(page)      
+            #dom = BeautifulSoup(page)
             #td1 = dom.find(True, {'class': 'col1'})
             #td2 = dom.find(True, {'class': 'col2'})
             #print dom
@@ -79,7 +80,7 @@ class webcrawlerTorrent():
             #print lang
             #if storeMethod=='TPBSavePage':
                 #self.dbNewtorrent( tpbid, time, cat, size, fulldescription)
-
+    
     def getTPBListPage(self, url, storeMethod):
         try:
             response = urllib2.urlopen(url)
@@ -91,14 +92,17 @@ class webcrawlerTorrent():
             print 'Reason: ', e.reason
         else:
         # everything is fine
+            count = 0
             page = response.read()
             dom = BeautifulSoup(page)
             td = dom.find(True, {'id': 'searchResult'})
             tr = td.findAll('tr')[1:]
             for info in tr:
+                if len(info.findAll('td')) == 1:
+                    continue
                 tpbid = info.findAll('a')[1]['href'].split('/')[2]
                 cat = info.find('a')['href'][8:]
-                title = info.findAll('a')[1]['title'][11:]
+                #title = info.findAll('a')[1]['title'][11:]
                 seeders = info.findAll('td')[5].contents[0]
                 leechers = info.findAll('td')[6].contents[0]
                 size = info.findAll('td')[4].contents[0]
@@ -107,37 +111,43 @@ class webcrawlerTorrent():
                     self.dbNewtorrent(tpbid,title,cat,size)
                 if storeMethod =='realtime':
                     self.recordRowTopCatItem( tpbid, cat, seeders, leechers )
-                print "%s, %s, %s" % (tpbid, seeders, leechers)
+                if storeMethod =='print':
+					print "%s, %s, %s" % (tpbid, seeders, leechers)
+                count = count + 1
+            return count
 
 # methods parsing *********************************************************************************************
-
+    
     def getSeedersAndLeechers(self, id):
         url = self.url+'torrent/'+str(id)+"/"
         data = self.getTPBTorrentPage( url, 'TPBSavePage', id  )
-
+    
     def getTopCatPage(self, idcat ):
         url = self.url+'top/'+str(idcat)+"/"
-        self.getTPBListPage( url , 'none' )
-
+        self.getTPBListPage( url , 'print' )
+    
     def recentTorrentFile(self, page):
         url = self.url+'recent/'+str(page)
         self.getTPBListPage( url , 'newTorrent' )
-
+    
     def getBrowseSeedersCatPage(self,id,page=0):
         # top seeders:
         url = self.url+'browse/'+str(id)+"/"+str(page)+"/7"
-        self.getTPBListPage( url , 'realtime' )
-
+        return self.getTPBListPage( url , 'print' )
+    
     def getBrowseLeechersCatPage(self,id,page=0):
         url = self.url+'browse/'+str(id)+"/"+str(page)+"/9"
-        self.getTPBListPage( url , 'realtime' )
-
+        return self.getTPBListPage( url , 'print' )
+    
     def getTop100(self,path):
         for idcat in self.categories:
             self.getTopCatPage(idcat)
 
-tpb = webcrawlerTorrent()
-tpb.getTopCatPage(205)
+    
+    def recordActivityForCategory(self, cat):
+		for currentPage in range(0, 100):
+			self.getBrowseLeechersCatPage(cat, currentPage)
+
 
 #tpb = webcrawlerTorrent()
 #data = tpb.getSeedersAndLeechers('5130018')
