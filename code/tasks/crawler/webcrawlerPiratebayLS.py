@@ -1,5 +1,7 @@
 from BeautifulSoup import BeautifulSoup
 from urllib2 import Request, urlopen, URLError, HTTPError
+import time
+import calendar
 import urllib
 import urllib2
 import time
@@ -82,6 +84,7 @@ class webcrawlerTorrent():
                 #self.dbNewtorrent( tpbid, time, cat, size, fulldescription)
     
     def getTPBListPage(self, url, storeMethod):
+        sampleTime = calendar.timegm(time.gmtime())
         try:
             response = urllib2.urlopen(url)
         except HTTPError, e:
@@ -97,22 +100,23 @@ class webcrawlerTorrent():
             dom = BeautifulSoup(page)
             td = dom.find(True, {'id': 'searchResult'})
             tr = td.findAll('tr')[1:]
+            
             for info in tr:
                 if len(info.findAll('td')) == 1:
                     continue
                 tpbid = info.findAll('a')[1]['href'].split('/')[2]
                 cat = info.find('a')['href'][8:]
-                #title = info.findAll('a')[1]['title'][11:]
+                title = info.findAll('a')[1]['title'][11:]
                 seeders = info.findAll('td')[5].contents[0]
                 leechers = info.findAll('td')[6].contents[0]
                 size = info.findAll('td')[4].contents[0]
-                time = info.findAll('td')[2].contents[0]
+                creationTime = info.findAll('td')[2].contents[0]
                 if storeMethod=='newTorrent':
                     self.dbNewtorrent(tpbid,title,cat,size)
                 if storeMethod =='realtime':
                     self.recordRowTopCatItem( tpbid, cat, seeders, leechers )
                 if storeMethod =='print':
-					print "%s, %s, %s" % (tpbid, seeders, leechers)
+					print "%s, %s, %s, %s" % (sampleTime, tpbid, seeders, leechers)
                 count = count + 1
             return count
 
@@ -138,6 +142,10 @@ class webcrawlerTorrent():
     def getBrowseLeechersCatPage(self,id,page=0):
         url = self.url+'browse/'+str(id)+"/"+str(page)+"/9"
         return self.getTPBListPage( url , 'print' )
+
+    def getBrowseNewestCatPage(self, id, page=0):
+        url = self.url+'browse/'+str(id)+"/"+str(page)+"/3"
+        return self.getTPBListPage( url , 'print' )
     
     def getTop100(self,path):
         for idcat in self.categories:
@@ -147,6 +155,7 @@ class webcrawlerTorrent():
     def recordActivityForCategory(self, cat):
 		for currentPage in range(0, 100):
 			self.getBrowseLeechersCatPage(cat, currentPage)
+			self.getBrowseNewestCatPage(cat, currentPage)
 
 
 #tpb = webcrawlerTorrent()
