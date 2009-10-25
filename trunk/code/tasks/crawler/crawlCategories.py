@@ -5,7 +5,7 @@ import webcrawlerPiratebayLS
 tpb = webcrawlerPiratebayLS.webcrawlerTorrent()
 
 
-tpb.recordActivityForCategory(205)
+tpb.recordActivityForAllSubCategories('sql')
 
 #for cat in tpb.subCategories:
 #	print "-------------\n%s\n-------------" % cat
