@@ -29,7 +29,7 @@ class webcrawlerTorrent():
 		self.subCategories = [101,102,103,104,199,201,202,203,204,205,206,207,208,299,301,302,303,304,399,401,402,403,404,405,406,499,501,502,503,504,505,506,599,601,602,603,604,699]
 
 		self.db = MySQLdb.connect(host=self.host, user=self.userDataBase, passwd=self.passwordDataBase, db=self.nameDataBase)
-
+		self.dbc = self.db.cursor()
 # database *********************************************************************************************
 	
 	"""def recordRowTopCatItem(self, tpbid, cat, seeders, leechers):
@@ -139,10 +139,10 @@ class webcrawlerTorrent():
 			if storeMethod == 'sql':
 				sql = "INSERT INTO activity (tpb_id, gmt_time, seeders, leechers) VALUES \n"
 				for sample in samples:
-					sql = sql + "(%s, %s, %s, %s),\n" % (sample.tpbid, sample.sampleTime, sample.seeders, sample.leechers)
+					sql = sql + "(%s, UTC_TIMESTAMP(), %s, %s),\n" % (sample.tpbid, sample.seeders, sample.leechers)
 				sql = sql[0:len(sql)-2] + ";"
 				#print sql
-				self.db.execute(sql)
+				self.dbc.execute(sql)
 				
 				
 			return count

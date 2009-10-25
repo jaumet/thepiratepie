@@ -1,11 +1,14 @@
 import webcrawlerPiratebayLS
+import time
 
 # scrape procedure!
 
 tpb = webcrawlerPiratebayLS.webcrawlerTorrent()
 
 
-tpb.recordActivityForAllSubCategories('sql')
+while 1:
+	print "Started scraper at %s" % (time.strftime("%c"))
+	tpb.recordActivityForAllSubCategories('sql')
 
 #for cat in tpb.subCategories:
 #	print "-------------\n%s\n-------------" % cat
