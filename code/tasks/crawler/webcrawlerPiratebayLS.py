@@ -188,6 +188,7 @@ class webcrawlerTorrent():
 			
 	def recordActivityForAllSubCategories(self, method="print"):
 		for cat in self.subCategories:
+			print "starting cat %s" % (cat)
 			self.recordActivityForCategory(cat, method)
 
 
