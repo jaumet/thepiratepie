@@ -141,7 +141,7 @@ class webcrawlerTorrent():
 				for sample in samples:
 					sql = sql + "(%s, UTC_TIMESTAMP(), %s, %s),\n" % (sample.tpbid, sample.seeders, sample.leechers)
 				sql = sql[0:len(sql)-2] + ";"
-				#print sql
+				print sql
 				self.dbc.execute(sql)
 				
 				
