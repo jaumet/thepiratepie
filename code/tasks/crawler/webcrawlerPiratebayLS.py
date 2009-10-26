@@ -7,6 +7,7 @@ import urllib2
 import time
 import MySQLdb
 import threadpool
+import threading
 
 
 class activitySample():
@@ -29,6 +30,11 @@ class webcrawlerTorrent():
 		self.categories = [100,101,102,103,104,199,200,201,202,203,204,205,206,207,208,299,300,301,302,303,304,399,400,401,402,403,404,405,406,499,500,501,502,503,504,505,506,599,600,601,602,603,604,699]
 		self.subCategories = [101,102,103,104,199,201,202,203,204,205,206,207,208,299,301,302,303,304,399,401,402,403,404,405,406,499,501,502,503,504,505,506,599,601,602,603,604,699]
 
+		self.pendingTasks = 0
+		self.pendingTasksLock = threading.Lock()
+		
+		self.dbLock = threading.Lock()
+
 		try:
 			self.db = MySQLdb.connect(host=self.host, user=self.userDataBase, passwd=self.passwordDataBase, db=self.nameDataBase)
 			self.dbc = self.db.cursor()
@@ -36,6 +42,19 @@ class webcrawlerTorrent():
 			print "Could not connect to MySQL!"
 			
 # database *********************************************************************************************
+	
+	def getDbConnection():
+		try:
+			db = MySQLdb.connect(host=self.host, user=self.userDataBase, passwd=self.passwordDataBase, db=self.nameDataBase)
+			return db
+		except:
+			print "Could not get a MySQL connection."
+			return None
+	
+	def safeDbQuery(sql):
+		self.dbLock.acquire()
+		self.dbc.execute(sql)
+		self.dbLock.release()
 	
 	"""def recordRowTopCatItem(self, tpbid, cat, seeders, leechers):
 		time =""
@@ -99,6 +118,8 @@ class webcrawlerTorrent():
 				#self.dbNewtorrent( tpbid, time, cat, size, fulldescription)
 	
 	def getTPBListPage(self, url, storeMethod):
+		
+				
 		sampleTime = calendar.timegm(time.gmtime())
 		try:
 			response = urllib2.urlopen(url)
@@ -147,10 +168,20 @@ class webcrawlerTorrent():
 					sql = sql + "(%s, UTC_TIMESTAMP(), %s, %s),\n" % (sample.tpbid, sample.seeders, sample.leechers)
 				sql = sql[0:len(sql)-2] + ";"
 				#print sql
-				self.dbc.execute(sql)
+				self.safeDbQuery(sql)
+				#threading.local().dbc.execute(sql)
 				
 				
 			return count
+
+# tasks info *********************************************************************************************
+	def taskFinished(self, workRequest, result):
+		self.pendingTasksLock.acquire()
+		self.pendingTasks = self.pendingTasks - 1
+		if self.pendingTasks % 100 == 0:
+			print "Pending tasks: %s" % (self.pendingTasks)
+		self.pendingTasksLock.release()
+	
 
 # methods parsing *********************************************************************************************
 	
@@ -184,19 +215,37 @@ class webcrawlerTorrent():
 			self.getTopCatPage(idcat)
 
 	
-	def recordActivityForCategory(self, cat, method="print"):
+	"""def recordActivityForCategory(self, cat, method="print"):
+		db = self.getDbConnection()
+		dbc = db.cursor()
 		for currentPage in range(0, 100):
-			self.getBrowseLeechersCatPage(cat, currentPage, method)
-			count = self.getBrowseNewestCatPage(cat, currentPage, method)
+			self.getBrowseLeechersCatPage(cat, currentPage, method, dbc)
+			count = self.getBrowseNewestCatPage(cat, currentPage, method, dbc)
 			print "cat %s at %s" % (cat, currentPage)
 			if count == 0:
-				break
+				break"""
 			
 	def recordActivityForAllSubCategories(self, method="print"):
-		pool = threadpool.ThreadPool(len(self.subCategories))
+		pool = threadpool.ThreadPool( 64 )
+		self.pendingTasks = 0
+		
 		for cat in self.subCategories:
-			request = threadpool.WorkRequest(self.recordActivityForCategory, (cat, method) )
-			pool.putRequest(request)
+			for currentPage in range(0, 100):
+				# scrape by top leechers
+				request1 = threadpool.WorkRequest(self.getBrowseLeechersCatPage, (cat, currentPage, method), None, None, self.taskFinished )
+				pool.putRequest(request1)
+			
+				# scrape by newest
+				request2 = threadpool.WorkRequest(self.getBrowseLeechersCatPage, (cat, currentPage, method), None, None, self.taskFinished )
+				pool.putRequest(request2)
+		
+				self.pendingTasksLock.acquire()
+				self.pendingTasks = self.pendingTasks + 2
+				self.pendingTasksLock.release()
+				
+				
+			
+			
 			#print "starting cat %s" % (cat)
 			#self.recordActivityForCategory(cat, method)
 		pool.wait()
