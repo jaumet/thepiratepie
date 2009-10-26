@@ -8,7 +8,10 @@ import time
 import MySQLdb
 import threadpool
 import threading
+import os
 
+	
+	
 
 class activitySample():
 	def __init__(self):
@@ -34,13 +37,33 @@ class webcrawlerTorrent():
 		self.pendingTasksLock = threading.Lock()
 		
 		self.dbLock = threading.Lock()
+		self.debugDbLock = threading.Lock()
+		
+		self.haveDebugSQL = False
+		self.haveSQL = False
+		
+		try:
+			self.debugDB = MySQLdb.connect(host=self.host, user=self.userDataBase, passwd=self.passwordDataBase, db=self.nameDataBase)
+			self.debugDBCursor = self.debugDB.cursor()
+			self.haveDebugSQL = True
+		except:
+			print "Could not connect to MySQL!"
 
 		try:
 			self.db = MySQLdb.connect(host=self.host, user=self.userDataBase, passwd=self.passwordDataBase, db=self.nameDataBase)
 			self.dbc = self.db.cursor()
+			self.haveSQL = True
 		except:
 			print "Could not connect to MySQL!"
 			
+	
+	def debug(self, msg):
+		print "pid %s - %s: %s" % (os.getpid(), time.strftime("%c"), msg)
+		if self.haveDebugSQL:
+			self.debugDbLock.acquire()
+			self.debugDBCursor.execute("""INSERT INTO log_crawler (message, pid) VALUES ('%s')""", (msg, os.getpid()) )
+			self.debugDbLock.release()
+		
 # database *********************************************************************************************
 	
 	def getDbConnection(self):
@@ -179,7 +202,7 @@ class webcrawlerTorrent():
 		self.pendingTasksLock.acquire()
 		self.pendingTasks = self.pendingTasks - 1
 		if self.pendingTasks % 100 == 0:
-			print "Pending tasks: %s" % (self.pendingTasks)
+			self.debug( "Pending tasks: %s" % (self.pendingTasks) )
 		self.pendingTasksLock.release()
 	
 
