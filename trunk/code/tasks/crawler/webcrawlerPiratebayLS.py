@@ -6,6 +6,7 @@ import urllib
 import urllib2
 import time
 import MySQLdb
+import threadpool
 
 
 class activitySample():
@@ -28,8 +29,12 @@ class webcrawlerTorrent():
 		self.categories = [100,101,102,103,104,199,200,201,202,203,204,205,206,207,208,299,300,301,302,303,304,399,400,401,402,403,404,405,406,499,500,501,502,503,504,505,506,599,600,601,602,603,604,699]
 		self.subCategories = [101,102,103,104,199,201,202,203,204,205,206,207,208,299,301,302,303,304,399,401,402,403,404,405,406,499,501,502,503,504,505,506,599,601,602,603,604,699]
 
-		self.db = MySQLdb.connect(host=self.host, user=self.userDataBase, passwd=self.passwordDataBase, db=self.nameDataBase)
-		self.dbc = self.db.cursor()
+		try:
+			self.db = MySQLdb.connect(host=self.host, user=self.userDataBase, passwd=self.passwordDataBase, db=self.nameDataBase)
+			self.dbc = self.db.cursor()
+		except:
+			print "Could not connect to MySQL!"
+			
 # database *********************************************************************************************
 	
 	"""def recordRowTopCatItem(self, tpbid, cat, seeders, leechers):
@@ -183,13 +188,18 @@ class webcrawlerTorrent():
 		for currentPage in range(0, 100):
 			self.getBrowseLeechersCatPage(cat, currentPage, method)
 			count = self.getBrowseNewestCatPage(cat, currentPage, method)
+			print "cat %s at %s" % (cat, currentPage)
 			if count == 0:
 				break
 			
 	def recordActivityForAllSubCategories(self, method="print"):
+		pool = threadpool.ThreadPool(len(self.subCategories))
 		for cat in self.subCategories:
-			print "starting cat %s" % (cat)
-			self.recordActivityForCategory(cat, method)
+			request = threadpool.WorkRequest(self.recordActivityForCategory, (cat, method) )
+			pool.putRequest(request)
+			#print "starting cat %s" % (cat)
+			#self.recordActivityForCategory(cat, method)
+		pool.wait()
 
 
 #tpb = webcrawlerTorrent()

@@ -8,7 +8,7 @@ tpb = webcrawlerPiratebayLS.webcrawlerTorrent()
 
 while 1:
 	print "Started scraper at %s" % (time.strftime("%c"))
-	tpb.recordActivityForAllSubCategories('sql')
+	tpb.recordActivityForAllSubCategories('none')
 
 #for cat in tpb.subCategories:
 #	print "-------------\n%s\n-------------" % cat
