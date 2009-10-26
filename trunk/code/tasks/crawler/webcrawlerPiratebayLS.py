@@ -136,7 +136,7 @@ class webcrawlerTorrent():
 					print "%s, %s, %s, %s" % (sampleTime, tpbid, seeders, leechers)
 				count = count + 1
 			
-			if storeMethod == 'sql':
+			if storeMethod == 'sql' and count > 0:
 				sql = "INSERT INTO activity (tpb_id, gmt_time, seeders, leechers) VALUES \n"
 				for sample in samples:
 					sql = sql + "(%s, UTC_TIMESTAMP(), %s, %s),\n" % (sample.tpbid, sample.seeders, sample.leechers)
@@ -182,7 +182,9 @@ class webcrawlerTorrent():
 	def recordActivityForCategory(self, cat, method="print"):
 		for currentPage in range(0, 100):
 			self.getBrowseLeechersCatPage(cat, currentPage, method)
-			self.getBrowseNewestCatPage(cat, currentPage, method)
+			count = self.getBrowseNewestCatPage(cat, currentPage, method)
+			if count == 0:
+				break
 			
 	def recordActivityForAllSubCategories(self, method="print"):
 		for cat in self.subCategories:
