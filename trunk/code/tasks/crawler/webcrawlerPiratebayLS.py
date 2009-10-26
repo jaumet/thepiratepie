@@ -43,7 +43,7 @@ class webcrawlerTorrent():
 			
 # database *********************************************************************************************
 	
-	def getDbConnection():
+	def getDbConnection(self):
 		try:
 			db = MySQLdb.connect(host=self.host, user=self.userDataBase, passwd=self.passwordDataBase, db=self.nameDataBase)
 			return db
@@ -51,7 +51,7 @@ class webcrawlerTorrent():
 			print "Could not get a MySQL connection."
 			return None
 	
-	def safeDbQuery(sql):
+	def safeDbQuery(self, sql):
 		self.dbLock.acquire()
 		self.dbc.execute(sql)
 		self.dbLock.release()
