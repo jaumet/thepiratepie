@@ -61,7 +61,7 @@ class webcrawlerTorrent():
 		print "pid %s - %s: %s" % (os.getpid(), time.strftime("%c"), msg)
 		if self.haveDebugSQL:
 			self.debugDbLock.acquire()
-			self.debugDBCursor.execute("""INSERT INTO log_crawler (message, pid) VALUES ('%s', %s)""", (msg, os.getpid()) )
+			#self.debugDBCursor.execute("""INSERT INTO log_crawler (message, pid) VALUES ('%s', %s)""", (msg, os.getpid()) )
 			self.debugDbLock.release()
 		
 # database *********************************************************************************************
