@@ -226,7 +226,7 @@ class webcrawlerTorrent():
 				break"""
 			
 	def recordActivityForAllSubCategories(self, method="print"):
-		pool = threadpool.ThreadPool( 64 )
+		pool = threadpool.ThreadPool( 32 )
 		self.pendingTasks = 0
 		
 		for cat in self.subCategories:
