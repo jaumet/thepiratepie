@@ -1,3 +1,7 @@
+# ThePiratePie.org Scraper
+# Records seeders/leechers counts for most active and newest torrents on ThePirateBay.org
+# By david.stolarsky@gmail.com
+
 import webcrawlerPiratebayLS
 import time
 
