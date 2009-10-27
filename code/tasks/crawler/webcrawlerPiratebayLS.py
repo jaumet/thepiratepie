@@ -59,9 +59,12 @@ class webcrawlerTorrent():
 	
 	def debug(self, msg):
 		print "pid %s - %s: %s" % (os.getpid(), time.strftime("%c"), msg)
+		sql = "INSERT INTO log_crawler (message, pid) VALUES ('%s', %s);" % (msg, os.getpid())
+		#print sql
+
 		if self.haveDebugSQL:
 			self.debugDbLock.acquire()
-			#self.debugDBCursor.execute("""INSERT INTO log_crawler (message, pid) VALUES ('%s', %s)""", (msg, os.getpid()) )
+			self.debugDBCursor.execute( sql )
 			self.debugDbLock.release()
 		
 # database *********************************************************************************************
@@ -75,9 +78,10 @@ class webcrawlerTorrent():
 			return None
 	
 	def safeDbQuery(self, sql):
-		self.dbLock.acquire()
-		self.dbc.execute(sql)
-		self.dbLock.release()
+		if self.haveSQL:
+			self.dbLock.acquire()
+			self.dbc.execute(sql)
+			self.dbLock.release()
 	
 	"""def recordRowTopCatItem(self, tpbid, cat, seeders, leechers):
 		time =""
