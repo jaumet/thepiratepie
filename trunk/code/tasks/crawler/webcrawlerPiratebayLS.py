@@ -13,14 +13,14 @@ import os
 	
 	
 
-class activitySample():
+class activitySample:
 	def __init__(self):
 		self.tpbid = -1
 		self.sampleTime = -1
 		self.seeders = -1
 		self.leechers = -1
 
-class webcrawlerTorrent():
+class webcrawlerTorrent:
 	
 	def __init__(self):
 		self.url = "http://thepiratebay.org/"
@@ -253,7 +253,7 @@ class webcrawlerTorrent():
 				break"""
 			
 	def recordActivityForAllSubCategories(self, method="print"):
-		pool = threadpool.ThreadPool( 32 )
+		pool = threadpool.ThreadPool( 50 )
 		self.pendingTasks = 0
 		
 		for cat in self.subCategories:
