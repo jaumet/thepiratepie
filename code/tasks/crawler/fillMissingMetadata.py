@@ -5,6 +5,9 @@
 import webcrawlerPiratebayLS
 import time
 
+import runonce
+
+runonce.quitIfDuplicate()
 
 tpb = webcrawlerPiratebayLS.webcrawlerTorrent()
 
