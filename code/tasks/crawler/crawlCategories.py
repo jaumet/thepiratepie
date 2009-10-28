@@ -4,16 +4,25 @@
 
 import webcrawlerPiratebayLS
 import time
+import fcntl
+import os, sys
+
+# run only 1 copy! (cron will start me every 5 minutes so if I crash I will come back)
+processes = os.popen("ps x").read()
+scriptName = os.path.basename(sys.argv[0])
+if processes.count(scriptName) > 1:
+	print "%s is already running" % (scriptName)
+	sys.exit()
 
 # scrape procedure!
 
 tpb = webcrawlerPiratebayLS.webcrawlerTorrent()
 
+tpb.debug("Started crawler script")
 
 while 1:
-	tpb.debug("Started scraper")
+	tpb.debug("Started crawler main loop")
 	tpb.recordActivityForAllSubCategories('sql')
-	tpb.debug("Finished scraper")
 
 #for cat in tpb.subCategories:
 #	print "-------------\n%s\n-------------" % cat
