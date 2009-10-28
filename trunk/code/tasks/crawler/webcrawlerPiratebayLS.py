@@ -9,7 +9,7 @@ import MySQLdb
 import threadpool
 import threading
 import os
-
+import simplejson as json
 	
 	
 
@@ -24,14 +24,21 @@ class webcrawlerTorrent:
 	
 	def __init__(self):
 		self.url = "http://thepiratebay.org/"
+		
 		self.nameDataBase = "piratepie"
 		self.userDataBase = "tpp"
+		
+		self.dbUsernameReadOnly = "tpp_select"
+		self.dbPasswordReadOnly = "tpp_select"
+
 		self.passwordDataBase = "tpp2009"
 		self.host= "mysql.thepiratepie.org"
 		self.tableActivity = "activity"
 		self.tableTPB = "tpb"
 		self.categories = [100,101,102,103,104,199,200,201,202,203,204,205,206,207,208,299,300,301,302,303,304,399,400,401,402,403,404,405,406,499,500,501,502,503,504,505,506,599,600,601,602,603,604,699]
 		self.subCategories = [101,102,103,104,199,201,202,203,204,205,206,207,208,299,301,302,303,304,399,401,402,403,404,405,406,499,501,502,503,504,505,506,599,601,602,603,604,699]
+
+		self.sortBy = { 'seeders' : { 'descending' : 7 }, 'leechers' : { 'descending' : 9 }, 'newest' : { 'descending' : 3 } }
 
 		self.pendingTasks = 0
 		self.pendingTasksLock = threading.Lock()
@@ -76,35 +83,29 @@ class webcrawlerTorrent:
 		except:
 			print "Could not get a MySQL connection."
 			return None
+
+	def getReadOnlyDbConnection(self):
+		try:
+			db = MySQLdb.connect(host=self.host, user=self.dbUsernameReadOnly, passwd=self.dbPasswordReadOnly, db=self.nameDataBase)
+			return db
+		except:
+			print "Could not get a readonly MySQL connection."
+			return None
+
 	
 	def safeDbQuery(self, sql):
+		self.dbLock.acquire()
 		if self.haveSQL:
-			self.dbLock.acquire()
 			self.dbc.execute(sql)
-			self.dbLock.release()
+		else:
+			print "No SQL.  otherwise would run:\n%s" % (sql)
+		self.dbLock.release()
 	
-	"""def recordRowTopCatItem(self, tpbid, cat, seeders, leechers):
-		time =""
-		sql = "INSERT INTO "+self.tableRealtimeDataBase+" ('tpb-id','time','cat','seeders','leechers') VALUES ('"+tpbid+"','"+time+"','"+cat+"','"+seeders+"','"+leechers+"')"
-		# connect
-		db = MySQLdb.connect(host=self.host, user=self.userDataBase, passwd=self.passwordDataBase, db=self.nameDataBase)
-		# create a cursor
-		cursor = db.cursor()
-		# execute SQL statement
-		cursor.execute(sql)"""
-	
-	"""def dbNewtorrent(self,tpbid,title,cat,size, fulldescription):
-		sql = "INSERT INTO "+self.tableTPB+" ('tpb-id','title','cat','size', 'fulldescription') VALUES ('"+tpbid+"','"+title+"','"+cat+"','"+size+"','"+fulldescription+"')"
-		# connect
-		db = MySQLdb.connect(host=self.host, user=self.userDataBase, passwd=self.passwordDataBase, db=self.nameDataBase)
-		# create a cursor
-		cursor = db.cursor()
-		# execute SQL statement
-		cursor.execute(sql)"""
-
 # feed methods ******************************************************************************************
 	
-	def getTPBTorrentPage(self, url, storeMethod, tpbid):
+	def getTPBTorrentPage(self, tpbid):
+		url = "http://www.thepiratebay.org/torrent/%s" % (tpbid)
+
 		try:
 			response = urllib2.urlopen(url)
 		except HTTPError, e:
@@ -116,10 +117,10 @@ class webcrawlerTorrent:
 		else:
 		# everything is fine
 			page = response.read()
-			print page
-			#dom = BeautifulSoup(page)
-			#td1 = dom.find(True, {'class': 'col1'})
-			#td2 = dom.find(True, {'class': 'col2'})
+			#print page
+			dom = BeautifulSoup(page)
+			td1 = dom.find(True, {'class': 'col1'})
+			td2 = dom.find(True, {'class': 'col2'})
 			#print dom
 			#seeders = td2.findAll('dd')[3].contents[0]
 			#print +"seeders:"+ seeders
@@ -127,15 +128,15 @@ class webcrawlerTorrent:
 			#print leechers
 			#user = td2.find('a').contents[0]
 			#print user
-			#cat = td1.find('a')['href'][8:]
+			cat = td1.find('a')['href'][8:]
 			#print cat
 			#quality = td2.find(True, {'id': 'rating'}).contents[0]
 			#print quality
-			#time = td2.findAll('dd')[1].contents[0]
+			time = td2.findAll('dd')[1].contents[0]
 			#print time
 			#numFiles = td1.findAll('a')[1].contents[0]
 			#print numFiles
-			#fulldescriptions = str(dom.find(True, {'class': 'nfo'}))[23:-13]
+			fulldescriptions = str(dom.find(True, {'class': 'nfo'}))[23:-13]
 			#print fulldescriptions
 			#comments = str(td2.findAll('dd')[5].contents[0])[23:-7]
 			#print comments
@@ -143,10 +144,13 @@ class webcrawlerTorrent:
 			#print lang
 			#if storeMethod=='TPBSavePage':
 				#self.dbNewtorrent( tpbid, time, cat, size, fulldescription)
+			print "%s, %s, %s" % (tpbid, cat, time)
 	
-	def getTPBListPage(self, url, storeMethod):
+	def scrapeListPage(self, cat, page, sortingCode):
 		
-				
+
+		url = self.url+'browse/'+str(cat)+"/"+str(page)+str(sortingCode)
+		
 		sampleTime = calendar.timegm(time.gmtime())
 		try:
 			response = urllib2.urlopen(url)
@@ -159,8 +163,8 @@ class webcrawlerTorrent:
 		else:
 		# everything is fine
 			count = 0
-			page = response.read()
-			dom = BeautifulSoup(page)
+			html = response.read()
+			dom = BeautifulSoup(html)
 			td = dom.find(True, {'id': 'searchResult'})
 			tr = td.findAll('tr')[1:]
 			
@@ -169,31 +173,34 @@ class webcrawlerTorrent:
 			for info in tr:
 				if len(info.findAll('td')) == 1:
 					continue
-				tpbid = info.findAll('a')[1]['href'].split('/')[2]
-				cat = info.find('a')['href'][8:]
-				title = info.findAll('a')[1]['title'][11:]
-				seeders = info.findAll('td')[5].contents[0]
-				leechers = info.findAll('td')[6].contents[0]
-				size = info.findAll('td')[4].contents[0]
-				creationTime = info.findAll('td')[2].contents[0]
-				if storeMethod=='newTorrent':
-					self.dbNewtorrent(tpbid,title,cat,size)
-				if storeMethod =='sql':
-					sample = activitySample()
-					sample.tpbid = tpbid
-					sample.sampleTime = sampleTime
-					sample.seeders = seeders
-					sample.leechers = leechers
-					samples.append(sample)
-				if storeMethod =='print':
-					print "%s, %s, %s, %s" % (sampleTime, tpbid, seeders, leechers)
+
+
+				sample = activitySample()
+				sample.sampleTime = sampleTime
+
+				sample.tpbid = info.findAll('a')[1]['href'].split('/')[2]
+				#cat = info.find('a')['href'][8:]
+				#title = info.findAll('a')[1]['title'][11:]
+				sample.seeders = info.findAll('td')[5].contents[0]
+				sample.leechers = info.findAll('td')[6].contents[0]
+				#size = info.findAll('td')[4].contents[0]
+				#creationTime = info.findAll('td')[2].contents[0]
+				
+				samples.append(sample)
+				
 				count = count + 1
 			
-			if storeMethod == 'sql' and count > 0:
-				sql = "INSERT INTO activity (tpb_id, gmt_time, seeders, leechers) VALUES \n"
+			if count > 0:
+				
+				updateJSON = json.dumps( { 'cat' : cat, 'page' : page, 'sortingCode' : sortingCode } )
+
+				sql = "START TRANSACTION;\n" 
+				sql = sql + "INSERT INTO activity (tpb_id, gmt_time, seeders, leechers) VALUES \n"
 				for sample in samples:
 					sql = sql + "(%s, UTC_TIMESTAMP(), %s, %s),\n" % (sample.tpbid, sample.seeders, sample.leechers)
-				sql = sql[0:len(sql)-2] + ";"
+				sql = sql[0:len(sql)-2] + ";\n"
+				sql = sql + "UPDATE crawler_state (value) WHERE key = 'last_batch_insert' VALUES (%s);\n" % (updateJSON)
+				sql = sql + "COMMIT;"
 				#print sql
 				self.safeDbQuery(sql)
 				#threading.local().dbc.execute(sql)
@@ -218,69 +225,54 @@ class webcrawlerTorrent:
 	
 	def getTopCatPage(self, idcat ):
 		url = self.url+'top/'+str(idcat)+"/"
-		self.getTPBListPage( url , 'print' )
+		self.scrapeListPage( url , 'print' )
 	
 	def recentTorrentFile(self, page):
 		url = self.url+'recent/'+str(page)
-		self.getTPBListPage( url , 'newTorrent' )
+		self.scrapeListPage( url , 'newTorrent' )
 	
 	def getBrowseSeedersCatPage(self,id,page=0):
 		# top seeders:
 		url = self.url+'browse/'+str(id)+"/"+str(page)+"/7"
-		return self.getTPBListPage( url , 'print' )
+		return self.scrapeListPage( url , 'print' )
 	
-	def getBrowseLeechersCatPage(self,id,page=0, method="print"):
-		url = self.url+'browse/'+str(id)+"/"+str(page)+"/9"
-		return self.getTPBListPage( url , method )
-
-	def getBrowseNewestCatPage(self, id, page=0, method="print"):
-		url = self.url+'browse/'+str(id)+"/"+str(page)+"/3"
-		return self.getTPBListPage( url , method )
 	
 	def getTop100(self,path):
 		for idcat in self.categories:
 			self.getTopCatPage(idcat)
 
-	
-	"""def recordActivityForCategory(self, cat, method="print"):
-		db = self.getDbConnection()
-		dbc = db.cursor()
-		for currentPage in range(0, 100):
-			self.getBrowseLeechersCatPage(cat, currentPage, method, dbc)
-			count = self.getBrowseNewestCatPage(cat, currentPage, method, dbc)
-			print "cat %s at %s" % (cat, currentPage)
-			if count == 0:
-				break"""
 			
 	def recordActivityForAllSubCategories(self, method="print"):
 		pool = threadpool.ThreadPool( 50 )
 		self.pendingTasks = 0
 		
-		for cat in self.subCategories:
-			for currentPage in range(0, 100):
-				# scrape by top leechers
-				request1 = threadpool.WorkRequest(self.getBrowseLeechersCatPage, (cat, currentPage, method), None, None, self.taskFinished )
+		for currentPage in range(0, 100):
+			for cat in self.subCategories:
+				# scrape by top leechers and by newest
+				request1 = threadpool.WorkRequest(self.scrapeListPage( cat, currentPage, self.sortBy['leechers']['descending'] ) )
+				request2 = threadpool.WorkRequest(self.scrapeListPage( cat, currentPage, self.sortBy['newest']['descending'] ) )
+
 				pool.putRequest(request1)
-			
-				# scrape by newest
-				request2 = threadpool.WorkRequest(self.getBrowseLeechersCatPage, (cat, currentPage, method), None, None, self.taskFinished )
 				pool.putRequest(request2)
-		
+
+
 				self.pendingTasksLock.acquire()
 				self.pendingTasks = self.pendingTasks + 2
 				self.pendingTasksLock.release()
-				
-				
+							
 			
-			
-			#print "starting cat %s" % (cat)
-			#self.recordActivityForCategory(cat, method)
 		pool.wait()
 
+	def fillMissingMetadata(self):
+		#pool = threadpool.ThreadPool(50)
+		#self.pendingTasks = 0
 
-#tpb = webcrawlerTorrent()
-#data = tpb.getSeedersAndLeechers('5130018')
-#print data['seeders']
-#print data['leechers']
-#tpb.getTopCatPage(100)
-#print time.localtime()
+		db = self.getReadOnlyDbConnection()
+		c = db.cursor()
+		c.execute("SELECT DISTINCT tpb_id FROM `activity` WHERE activity.tpb_id NOT IN (SELECT id FROM torrentinfo) LIMIT 100;")
+
+		for id in c:
+			print "scraping %s..." % (id[0])
+			self.getTPBTorrentPage( id[0] )
+
+

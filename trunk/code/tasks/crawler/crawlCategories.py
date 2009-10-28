@@ -7,12 +7,10 @@ import time
 import fcntl
 import os, sys
 
+import runonce
+
 # run only 1 copy! (cron will start me every 5 minutes so if I crash I will come back)
-processes = os.popen("ps x").read()
-scriptName = os.path.basename(sys.argv[0])
-if processes.count(scriptName) > 1:
-	print "%s is already running" % (scriptName)
-	sys.exit()
+runonce.quitIfDuplicate()
 
 # scrape procedure!
 
