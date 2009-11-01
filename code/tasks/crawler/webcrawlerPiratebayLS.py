@@ -97,6 +97,8 @@ class webcrawlerTorrent:
 		self.dbLock.acquire()
 		if self.haveSQL:
 			self.dbc.execute(sql)
+			for row in self.dbc:
+				print row
 		else:
 			print "No SQL.  otherwise would run:\n%s" % (sql)
 		self.dbLock.release()
@@ -192,15 +194,16 @@ class webcrawlerTorrent:
 			
 			if count > 0:
 				
-				updateJSON = json.dumps( { 'cat' : cat, 'page' : page, 'sortingCode' : sortingCode } )
-
-				sql = "START TRANSACTION;\n" 
+				sql = ''
 				sql = sql + "INSERT INTO activity (tpb_id, gmt_time, seeders, leechers) VALUES \n"
 				for sample in samples:
 					sql = sql + "(%s, UTC_TIMESTAMP(), %s, %s),\n" % (sample.tpbid, sample.seeders, sample.leechers)
 				sql = sql[0:len(sql)-2] + ";\n"
-				sql = sql + "UPDATE crawler_state (value) WHERE key = 'last_batch_insert' VALUES (%s);\n" % (updateJSON)
-				sql = sql + "COMMIT;"
+				self.safeDbQuery(sql)
+
+				sql = "UPDATE `crawler_jobs` SET last_run_utc=UTC_TIMESTAMP() WHERE cat=%s AND page=%s AND sortCode=%s;\n" % (cat, page, sortingCode)
+				self.safeDbQuery(sql)
+				#sql = sql + "COMMIT;"
 				#print sql
 				self.safeDbQuery(sql)
 				#threading.local().dbc.execute(sql)
