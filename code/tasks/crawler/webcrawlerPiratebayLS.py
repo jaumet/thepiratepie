@@ -205,7 +205,7 @@ class webcrawlerTorrent:
 				self.safeDbQuery(sql)
 				#sql = sql + "COMMIT;"
 				#print sql
-				self.safeDbQuery(sql)
+				#self.safeDbQuery(sql)
 				#threading.local().dbc.execute(sql)
 				
 				
@@ -246,10 +246,28 @@ class webcrawlerTorrent:
 
 			
 	def recordActivityForAllSubCategories(self, method="print"):
-		pool = threadpool.ThreadPool( 50 )
+		pool = threadpool.ThreadPool( 32 )
 		self.pendingTasks = 0
+
+
+
+
+
+		# do the 1,000 oldest jobs, then quit.  cron will start me again
+		db = self.getDbConnection()
+		dbc = db.cursor()
+		dbc.execute("SELECT cat, page, sortCode FROM crawler_jobs ORDER BY last_run_utc ASC LIMIT 1000")
+		for job in dbc:
+			request = threadpool.WorkRequest(self.scrapeListPage( job[0], job[1], job[2] ))
+			pool.putRequest(request)
+			self.pendingTasksLock.acquire()
+			self.pendingTasks = self.pendingTasks + 1
+			self.pendingTasksLock.release()
+			time.sleep(1)
+
+
 		
-		for currentPage in range(0, 100):
+		"""for currentPage in range(0, 100):
 			for cat in self.subCategories:
 				# scrape by top leechers and by newest
 				request1 = threadpool.WorkRequest(self.scrapeListPage( cat, currentPage, self.sortBy['leechers']['descending'] ) )
@@ -261,7 +279,7 @@ class webcrawlerTorrent:
 
 				self.pendingTasksLock.acquire()
 				self.pendingTasks = self.pendingTasks + 2
-				self.pendingTasksLock.release()
+				self.pendingTasksLock.release()"""
 							
 			
 		pool.wait()
