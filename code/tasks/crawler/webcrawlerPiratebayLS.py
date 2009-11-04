@@ -20,6 +20,8 @@ class activitySample:
 		self.seeders = -1
 		self.leechers = -1
 
+#class jobResult
+
 class webcrawlerTorrent:
 	
 	def __init__(self):
@@ -156,12 +158,8 @@ class webcrawlerTorrent:
 		sampleTime = calendar.timegm(time.gmtime())
 		try:
 			response = urllib2.urlopen(url)
-		except HTTPError, e:
+		except:
 			print 'The server couldn\'t fulfill the request.'
-			print 'Error code: ', e.code
-		except URLError, e:
-			print 'We failed to reach a server.'
-			print 'Reason: ', e.reason
 		else:
 		# everything is fine
 			count = 0
@@ -202,22 +200,21 @@ class webcrawlerTorrent:
 				self.safeDbQuery(sql)
 
 				sql = "UPDATE `crawler_jobs` SET last_run_utc=UTC_TIMESTAMP() WHERE cat=%s AND page=%s AND sortCode=%s;\n" % (cat, page, sortingCode)
+				#print "added %s samples" % (count)				
+
 				self.safeDbQuery(sql)
-				#sql = sql + "COMMIT;"
 				#print sql
-				#self.safeDbQuery(sql)
-				#threading.local().dbc.execute(sql)
 				
 				
 			return count
 
 # tasks info *********************************************************************************************
-	def taskFinished(self, workRequest, result):
+	"""def taskFinished(self, workRequest, result):
 		self.pendingTasksLock.acquire()
 		self.pendingTasks = self.pendingTasks - 1
 		if self.pendingTasks % 100 == 0:
 			self.debug( "Pending tasks: %s" % (self.pendingTasks) )
-		self.pendingTasksLock.release()
+		self.pendingTasksLock.release()"""
 	
 
 # methods parsing *********************************************************************************************
@@ -246,7 +243,7 @@ class webcrawlerTorrent:
 
 			
 	def recordActivityForAllSubCategories(self, method="print"):
-		pool = threadpool.ThreadPool( 32 )
+		pool = threadpool.ThreadPool( 64 )
 		self.pendingTasks = 0
 
 
@@ -260,10 +257,10 @@ class webcrawlerTorrent:
 		for job in dbc:
 			request = threadpool.WorkRequest(self.scrapeListPage( job[0], job[1], job[2] ))
 			pool.putRequest(request)
-			self.pendingTasksLock.acquire()
+			"""self.pendingTasksLock.acquire()
 			self.pendingTasks = self.pendingTasks + 1
-			self.pendingTasksLock.release()
-			time.sleep(1)
+			self.pendingTasksLock.release()"""
+			#time.sleep(1)
 
 
 		
