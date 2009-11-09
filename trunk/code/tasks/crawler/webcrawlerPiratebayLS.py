@@ -1,7 +1,9 @@
 from BeautifulSoup import BeautifulSoup
 from urllib2 import Request, urlopen, URLError, HTTPError
+import re
 import time
 import calendar
+import datetime
 import urllib
 import urllib2
 import time
@@ -9,7 +11,6 @@ import MySQLdb
 import threadpool
 import threading
 import os
-import simplejson as json
 	
 	
 
@@ -106,12 +107,19 @@ class webcrawlerTorrent:
 		self.dbLock.release()
 	
 # feed methods ******************************************************************************************
+
+	def downloadTorrentFileToDb(self, tpbid):
+		True
 	
-	def getTPBTorrentPage(self, tpbid):
-		url = "http://www.thepiratebay.org/torrent/%s" % (tpbid)
+	def getTorrentInfo(self, tpbid):
+		url = "http://thepiratebay.org/torrent/%s" % (tpbid)
+
+		
 
 		try:
+			#page = os.popen("wget -q -O- http://thepiratebay.org/torrent/%s" % (tpbid) ).read()
 			response = urllib2.urlopen(url)
+			page = response.read()
 		except HTTPError, e:
 			print 'The server couldn\'t fulfill the request.'
 			print 'Error code: ', e.code
@@ -120,36 +128,37 @@ class webcrawlerTorrent:
 			print 'Reason: ', e.reason
 		else:
 		# everything is fine
-			page = response.read()
-			#print page
+			torrent = {}
 			dom = BeautifulSoup(page)
+			#print dom
+			details = dom.find('div', {'id' : 'detailsframe'})
 			td1 = dom.find(True, {'class': 'col1'})
 			td2 = dom.find(True, {'class': 'col2'})
-			#print dom
-			#seeders = td2.findAll('dd')[3].contents[0]
-			#print +"seeders:"+ seeders
-			#leechers = td2.findAll('dd')[4].contents[0]
-			#print leechers
-			#user = td2.find('a').contents[0]
-			#print user
-			cat = td1.find('a')['href'][8:]
-			#print cat
-			#quality = td2.find(True, {'id': 'rating'}).contents[0]
-			#print quality
-			time = td2.findAll('dd')[1].contents[0]
-			#print time
-			#numFiles = td1.findAll('a')[1].contents[0]
-			#print numFiles
-			fulldescriptions = str(dom.find(True, {'class': 'nfo'}))[23:-13]
-			#print fulldescriptions
-			#comments = str(td2.findAll('dd')[5].contents[0])[23:-7]
-			#print comments
-			#lang = td1.findAll('dd')[4].contents[0]
-			#print lang
-			#if storeMethod=='TPBSavePage':
-				#self.dbNewtorrent( tpbid, time, cat, size, fulldescription)
-			print "%s, %s, %s" % (tpbid, cat, time)
+
+
+			torrent['title'] = details.find('div', {'id' : 'title'}).string.strip()
+
+			torrent['torrent_url'] = details.find('a', {'title' : 'Download this torrent'})['href']
+
+			torrent['cat'] = td1.find('a', {'title' : 'More from this category'})['href'][8:]
+
+			sizeString = details.find('dt', text='Size:').parent.nextSibling.nextSibling.string
+			openParen = sizeString.find('(')
+			torrent['size'] = re.findall("[0-9]*", sizeString[openParen+1:])[0]
 	
+			torrent['user'] = details.find('dt', text='By:').parent.nextSibling.nextSibling.find('a')['href'].split('/')[2]
+
+			uploadedLabel = details.find(text='Uploaded:')
+			dateString = uploadedLabel.parent.nextSibling.nextSibling.string
+			"2009-10-10 04:04:20 GMT"
+			tuple = [dateString[0:4], dateString[5:7], dateString[8:10], dateString[11:13], dateString[14:16], dateString[17:19]]
+			date = datetime.datetime(int(tuple[0]), int(tuple[1]), int(tuple[2]), int(tuple[3]), int(tuple[4]), int(tuple[5]))
+			torrent['uploaded'] = calendar.timegm(date.timetuple())
+
+			torrent['description'] = str(dom.find(True, {'class': 'nfo'}))[23:-13]
+	
+			return torrent
+
 	def scrapeListPage(self, cat, page, sortingCode):
 		
 
@@ -166,7 +175,10 @@ class webcrawlerTorrent:
 			html = response.read()
 			dom = BeautifulSoup(html)
 			td = dom.find(True, {'id': 'searchResult'})
-			tr = td.findAll('tr')[1:]
+
+			tr = []
+			if(td != None):
+				tr = td.findAll('tr')[1:]
 			
 			samples = []
 
