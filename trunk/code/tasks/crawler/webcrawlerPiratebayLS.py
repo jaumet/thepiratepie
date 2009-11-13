@@ -130,6 +130,12 @@ class webcrawlerTorrent:
 		# everything is fine
 			torrent = {}
 			dom = BeautifulSoup(page)
+
+			# bail if 404
+			title = dom.find('head').find('title').string
+			if title.find('Not Found') > -1:
+				return None
+
 			#print dom
 			details = dom.find('div', {'id' : 'detailsframe'})
 			td1 = dom.find(True, {'class': 'col1'})
@@ -145,12 +151,15 @@ class webcrawlerTorrent:
 			sizeString = details.find('dt', text='Size:').parent.nextSibling.nextSibling.string
 			openParen = sizeString.find('(')
 			torrent['size'] = re.findall("[0-9]*", sizeString[openParen+1:])[0]
-	
-			torrent['user'] = details.find('dt', text='By:').parent.nextSibling.nextSibling.find('a')['href'].split('/')[2]
+			
+			try:
+				torrent['user'] = details.find('dt', text='By:').parent.nextSibling.nextSibling.find('a')['href'].split('/')[2]
+			except:
+				torrent['user'] = 'Anonymous'
 
 			uploadedLabel = details.find(text='Uploaded:')
 			dateString = uploadedLabel.parent.nextSibling.nextSibling.string
-			"2009-10-10 04:04:20 GMT"
+			"2009-10-10 04:04:20 GMT" # just here for reference...
 			tuple = [dateString[0:4], dateString[5:7], dateString[8:10], dateString[11:13], dateString[14:16], dateString[17:19]]
 			date = datetime.datetime(int(tuple[0]), int(tuple[1]), int(tuple[2]), int(tuple[3]), int(tuple[4]), int(tuple[5]))
 			torrent['uploaded'] = calendar.timegm(date.timetuple())
