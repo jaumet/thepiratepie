@@ -120,15 +120,12 @@ class webcrawlerTorrent:
 			#page = os.popen("wget -q -O- http://thepiratebay.org/torrent/%s" % (tpbid) ).read()
 			response = urllib2.urlopen(url)
 			page = response.read()
-		except HTTPError, e:
-			print 'The server couldn\'t fulfill the request.'
-			print 'Error code: ', e.code
-		except URLError, e:
-			print 'We failed to reach a server.'
-			print 'Reason: ', e.reason
+		except:
+			return None
 		else:
 		# everything is fine
 			torrent = {}
+			torrent['id'] = tpbid
 			dom = BeautifulSoup(page)
 
 			# bail if 404
@@ -145,6 +142,13 @@ class webcrawlerTorrent:
 			torrent['title'] = details.find('div', {'id' : 'title'}).string.strip()
 
 			torrent['torrent_url'] = details.find('a', {'title' : 'Download this torrent'})['href']
+
+			try:
+				torrentResponse = urllib2.urlopen(torrent['torrent_url'])
+				torrentFile = torrentResponse.read()
+				torrent['torrent_file'] = torrentFile
+			except:
+				return None
 
 			torrent['cat'] = td1.find('a', {'title' : 'More from this category'})['href'][8:]
 
@@ -164,7 +168,7 @@ class webcrawlerTorrent:
 			date = datetime.datetime(int(tuple[0]), int(tuple[1]), int(tuple[2]), int(tuple[3]), int(tuple[4]), int(tuple[5]))
 			torrent['uploaded'] = calendar.timegm(date.timetuple())
 
-			torrent['description'] = str(dom.find(True, {'class': 'nfo'}))[23:-13]
+			torrent['description'] = str(dom.find(True, {'class': 'nfo'}).find('pre'))[5:-6]
 	
 			return torrent
 
@@ -270,13 +274,12 @@ class webcrawlerTorrent:
 
 
 
-
 		# do the 1,000 oldest jobs, then quit.  cron will start me again
 		db = self.getDbConnection()
 		dbc = db.cursor()
 		dbc.execute("SELECT cat, page, sortCode FROM crawler_jobs ORDER BY last_run_utc ASC LIMIT 1000")
 		for job in dbc:
-			request = threadpool.WorkRequest(self.scrapeListPage( job[0], job[1], job[2] ))
+			request = threadpool.WorkRequest(self.scrapeListPage, (job[0], job[1], job[2]) )
 			pool.putRequest(request)
 			"""self.pendingTasksLock.acquire()
 			self.pendingTasks = self.pendingTasks + 1
