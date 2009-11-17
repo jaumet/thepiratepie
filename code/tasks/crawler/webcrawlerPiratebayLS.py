@@ -168,7 +168,7 @@ class webcrawlerTorrent:
 			date = datetime.datetime(int(tuple[0]), int(tuple[1]), int(tuple[2]), int(tuple[3]), int(tuple[4]), int(tuple[5]))
 			torrent['uploaded'] = calendar.timegm(date.timetuple())
 
-			torrent['description'] = str(dom.find(True, {'class': 'nfo'}).find('pre'))[5:-6]
+			torrent['description'] = unicode(details.find('div', {'class': 'nfo'}).find('pre').string)
 	
 			return torrent
 
