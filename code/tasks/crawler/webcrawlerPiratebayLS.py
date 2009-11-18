@@ -118,7 +118,7 @@ class webcrawlerTorrent:
 
 		try:
 			#page = os.popen("wget -q -O- http://thepiratebay.org/torrent/%s" % (tpbid) ).read()
-			response = urllib2.urlopen(url)
+			response = urllib2.urlopen(url, None, 5)
 			page = response.read()
 		except:
 			return None
