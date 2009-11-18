@@ -1,3 +1,5 @@
+#!/home/david/local/bin/python2.6
+
 # ThePiratePie.org metadata scraper
 # Records metadata of torrents on ThePirateBay.org
 # By david.stolarsky@gmail.com
@@ -21,6 +23,7 @@ dbc = db.cursor()
 storeDB = MySQLdb.connect(host='mysql.thepiratepie.org', user='tpp', passwd='tpp2009', db='test_piratepie', charset='utf8')
 storeCursor = storeDB.cursor()
 
+
 pool = threadpool.ThreadPool( 32 )
 storeDBLock = threading.Lock()
 
@@ -43,15 +46,15 @@ def crawlAndStoreTorrent(id):
                                         torrent['description']  )  )
 		storeCursor.execute("INSERT INTO torrents (id, file) VALUES (%s, X'%s')" % (id, hexTorrent))
 		storeDBLock.release()
+		print "Stored %s" % (id)
 
 
-
-crawlAndStoreTorrent(5135917)
 
 dbc.execute("SELECT DISTINCT(tpb_id) FROM activity WHERE activity.tpb_id NOT IN (SELECT id FROM torrentinfo) ORDER BY gmt_time ASC LIMIT 100")
 for row in dbc:
 	request = threadpool.WorkRequest(crawlAndStoreTorrent, (row[0],))
 	pool.putRequest(request)
+	#crawlAndStoreTorrent(row[0])
 
 pool.wait()
 #pool.joinAllDismissedWorkers()
