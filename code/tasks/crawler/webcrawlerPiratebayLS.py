@@ -111,14 +111,14 @@ class webcrawlerTorrent:
 	def downloadTorrentFileToDb(self, tpbid):
 		True
 	
-	def getTorrentInfo(self, tpbid):
+	def getTorrentInfo(self, tpbid, timeout):
 		url = "http://thepiratebay.org/torrent/%s" % (tpbid)
 
 		
 
 		try:
 			#page = os.popen("wget -q -O- http://thepiratebay.org/torrent/%s" % (tpbid) ).read()
-			response = urllib2.urlopen(url, None, 5)
+			response = urllib2.urlopen(url, None, timeout)
 			page = response.read()
 		except:
 			return None
@@ -131,7 +131,7 @@ class webcrawlerTorrent:
 			# bail if 404
 			title = dom.find('head').find('title').string
 			if title.find('Not Found') > -1:
-				return None
+				return 'deleted'
 
 			#print dom
 			details = dom.find('div', {'id' : 'detailsframe'})
@@ -144,7 +144,7 @@ class webcrawlerTorrent:
 			torrent['torrent_url'] = details.find('a', {'title' : 'Download this torrent'})['href']
 
 			try:
-				torrentResponse = urllib2.urlopen(torrent['torrent_url'])
+				torrentResponse = urllib2.urlopen(torrent['torrent_url'], None, timeout)
 				torrentFile = torrentResponse.read()
 				torrent['torrent_file'] = torrentFile
 			except:
@@ -171,6 +171,45 @@ class webcrawlerTorrent:
 			torrent['description'] = unicode(details.find('div', {'class': 'nfo'}).find('pre').string)
 	
 			return torrent
+
+	def getNewestTorrentIds(self, page):
+		
+
+		url = 'http://thepiratebay.org/recent/'+str(page)
+	
+
+		html = ''
+	
+		try:
+			response = urllib2.urlopen(url)
+			html = response.read()
+		except:
+			print 'The server couldn\'t fulfill the request.'
+		else:
+		# everything is fine
+
+			dom = BeautifulSoup(html)
+			table = dom.find('table', {'id': 'searchResult'})
+
+
+			trs = []
+			if(table != None):
+				trs = table.findAll('tr')[1:]
+			
+			ids = []
+
+			for tr in trs:
+				if len(tr.findAll('td')) == 1:
+					continue
+
+
+				tpbid = tr.findAll('a')[1]['href'].split('/')[2]
+				ids.append(tpbid)
+				
+			
+			return ids
+
+
 
 	def scrapeListPage(self, cat, page, sortingCode):
 		
