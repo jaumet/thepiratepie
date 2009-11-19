@@ -20,7 +20,7 @@ tpb = webcrawlerPiratebayLS.webcrawlerTorrent()
 db = tpb.getDbConnection()
 dbc = db.cursor()
 
-storeDB = MySQLdb.connect(host='mysql.thepiratepie.org', user='tpp', passwd='tpp2009', db='test_piratepie', charset='utf8')
+storeDB = MySQLdb.connect(host='mysql.thepiratepie.org', user='tpp', passwd='tpp2009', db='piratepie', charset='utf8')
 storeCursor = storeDB.cursor()
 
 
@@ -28,15 +28,25 @@ pool = threadpool.ThreadPool( 32 )
 storeDBLock = threading.Lock()
 
 
-def crawlAndStoreTorrent(id):
+
+def crawlAndStoreTorrent(id, timeout=5):
 	print "Retrieving info for %s" % (id)
-	torrent = tpb.getTorrentInfo(id)
+	torrent = tpb.getTorrentInfo(id, timeout)
+
+
+	if torrent == 'deleted':
+		storeDBLock.acquire()
+		storeCursor.execute("INSERT INTO deleted_torrents (id) VALUES (%s);" % (id))
+		storeDBLock.release()
+		return None
+
 	if torrent != None:
 		hexTorrent = torrent['torrent_file'].encode('hex').upper()
 
 		storeDBLock.acquire()
-		storeCursor.execute("""INSERT INTO torrentinfo (id, user, date, title, size, cat, description, from_crawler)
-				       VALUES(%s, %s, %s, %s, %s, %s, %s, 1)""",
+		try:
+			storeCursor.execute("""INSERT INTO torrentinfo (id, user, date, title, size, cat, description, from_crawler)
+				       VALUES(%s, %s, %s, %s, %s, %s, %s, 1);""",
                                        (torrent['id'],
                                         torrent['user'],
                                         torrent['uploaded'],
@@ -44,17 +54,20 @@ def crawlAndStoreTorrent(id):
                                         torrent['size'],
                                         torrent['cat'],
                                         torrent['description']  )  )
-		storeCursor.execute("INSERT INTO torrents (id, file) VALUES (%s, X'%s')" % (id, hexTorrent))
+
+			storeCursor.execute("INSERT INTO torrents (id, file) VALUES (%s, X'%s');" % (id, hexTorrent))
+		except MySQLdb.IntegrityError:
+			# duplicate entry most likely, is ok
+			pass
 		storeDBLock.release()
 		print "Stored %s" % (id)
 
+	return torrent
 
 
-dbc.execute("SELECT DISTINCT(tpb_id) FROM activity WHERE activity.tpb_id NOT IN (SELECT id FROM torrentinfo) ORDER BY gmt_time ASC LIMIT 100")
+dbc.execute("SELECT DISTINCT(tpb_id) FROM activity WHERE tpb_id NOT IN (SELECT id FROM torrentinfo UNION SELECT id FROM deleted_torrents) LIMIT 1000;")
 for row in dbc:
-	request = threadpool.WorkRequest(crawlAndStoreTorrent, (row[0],))
+	request = threadpool.WorkRequest(crawlAndStoreTorrent, (row[0], 10))
 	pool.putRequest(request)
-	#crawlAndStoreTorrent(row[0])
 
 pool.wait()
-#pool.joinAllDismissedWorkers()
