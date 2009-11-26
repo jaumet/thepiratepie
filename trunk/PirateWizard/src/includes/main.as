@@ -12,6 +12,8 @@ private function makeWizard(e:Event):void
 {
 	wizard = new Wizard(canvas.width, canvas.height);
 	canvas.addChild(wizard);
+	
+	
 }
 
 private function receiveWizardData(e:ResultEvent):void {

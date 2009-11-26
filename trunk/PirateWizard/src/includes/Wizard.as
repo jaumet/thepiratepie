@@ -29,15 +29,21 @@ package includes
 			
 
 			
-			Application.application.bytesRequest.send();
+			//Application.application.bytesRequest.send();
 			Application.application.progressBar.visible = true;
+			
+			this.receiveWizardData(null);
 			
 			this.draw();
 		}
 		
 		public function receiveWizardData(e:ResultEvent):void {
 			
-			var sampleRows:Array = String(e.result).split("\n");
+			//var sampleRows:Array = String(e.result).split("\n");
+			
+			var pirateData = new PirateData();
+			var sampleRows:Array = pirateData.csvString.split("\n");
+	
 	
 			var bytesSums:Array = new Array();
 			var sum:Number = 0;
@@ -47,42 +53,73 @@ package includes
 			this.startTime = -1.0;
 			this.endTime = -1.0;
 			
-			var samplesByTime:Object = new Object();
+			
+			var times:Array = new Array();
+			var cats:Object = new Object();
 			for(var s:int = 0; s < sampleRows.length; s++)
 			{
 				var sample:Array = sampleRows[s].split(",");
 				
-				var key:String = sample[0];
+				var cat:String = sample[0];
 				var time:Number = sample[1];
 				var value:Number = sample[2] / 1073741824; // bytes to gigabytes
-	
-				if(key == '')
-					continue;
-	
-				var layer:WizardLayer;
-	
-
 				
-	
-				//trace(sample[0]);
-				if( ! this.getChildByName(key) )
+				if(times.indexOf(time) < 0)
+					times.push(time);
+				
+				if( ! cats[cat] )
+					cats[cat] = new Object();
+				
+				cats[cat][time] = value;
+			}
+			times.sort();
+			
+			
+			var samplesByTime:Object = new Object();
+			//for(var s:int = 0; s < sampleRows.length; s++)
+			for(var keyObj:Object in cats)
+			{
+				for(var t:int = 0; t < times.length; t++)
 				{
-					var grey:Number = Number(key) / 700.0;
-					var color:uint = 0xFF0000 * grey + 0x00FF00 * grey + 0x0000FF * grey;
+					//var sample:Array = sampleRows[s].split(",");
 					
-					layer = new WizardLayer(color, this.width, this.height, lastLayerKey);
-					layer.name = key;
+					var key:String = String(keyObj);
+					var time = times[t];
+					var value:Number;
 					
-					this.addChild(layer);
-					lastLayerKey = key;
+					if(cats[key][time])
+						value = cats[key][time];
+					else
+						value = 0.0;
+					
+					//var key:String = sample[0];
+					//var value:Number = sample[2] / 1073741824; // bytes to gigabytes
+		
+					if(key == '')
+						continue;
+		
+					var layer:WizardLayer;
+		
+					//trace(sample[0]);
+					if( ! this.getChildByName(key) )
+					{
+						var grey:Number = Number(key) / 700.0;
+						var color:uint = 0xFF0000 * grey + 0x00FF00 * grey + 0x0000FF * grey;
+						
+						layer = new WizardLayer(color, this.width, this.height, lastLayerKey);
+						layer.name = key;
+						
+						this.addChild(layer);
+						lastLayerKey = key;
+					}
+	
+					if(this.startTime < 0.0 || time < this.startTime)
+						this.startTime = time;
+					if(this.endTime < 0.0 || time > this.endTime)
+						this.endTime = time;
+					
+					layer.pushSample(time, value);
 				}
-
-				if(this.startTime < 0.0 || time < this.startTime)
-					this.startTime = time;
-				if(this.endTime < 0.0 || time > this.endTime)
-					this.endTime = time;
-				
-				layer.pushSample(time, value);
 			}
 			
 			top = this.getMaxHeight();

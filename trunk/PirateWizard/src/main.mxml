@@ -39,7 +39,7 @@ FROM torrentinfo
 
 SELECT cat, FLOOR( torrentinfo.date / @bin_size )*@bin_size AS `date` , SUM( size ) AS size
 FROM `torrentinfo`
-WHERE cat = 203 OR cat = 202
+WHERE cat = 203 OR cat = 205 OR cat = 202
 GROUP BY FLOOR( torrentinfo.date / @bin_size ), torrentinfo.cat
 ORDER BY torrentinfo.cat ASC, date ASC;</query>
         </mx:request>
