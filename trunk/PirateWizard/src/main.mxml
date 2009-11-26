@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" xmlns:ns1="includes.*">
+	<mx:Script source="includes/main.as"/>
+
+	<mx:TextInput x="10" y="10" width="1001" height="38" text="Search torrents..." fontSize="24"/>
+	
+	
+	<mx:ProgressBar id="progressBar" x="10" y="56" indeterminate="true" width="1001" height="7" label="" enabled="false" visible="false" />
+	
+	
+	<mx:Canvas x="10" y="71" width="1001" height="537" id="canvas" initialize="makeWizard(event)">
+	</mx:Canvas>
+
+	
+
+
+
+
+	<mx:HTTPService id="categoriesRequest" 
+        url="http://www.thepiratepie.org/wizard/sql.py" 
+        useProxy="false" method="POST" resultFormat="text" 
+        result="receiveCategories(event)">
+        <mx:request xmlns="">
+            <query>SELECT * FROM cat</query>
+        </mx:request>
+    </mx:HTTPService>
+    
+    <mx:HTTPService id="bytesRequest" 
+        url="http://www.thepiratepie.org/wizard/sql.py" 
+        useProxy="false" method="POST" resultFormat="text" 
+        result="receiveWizardData(event)">
+        <mx:request xmlns="">
+            <query>SET @bins =100;
+
+SET @bin_size = ( SELECT (
+MAX( date ) - MIN( date ) ) / @bins
+FROM torrentinfo
+);
+
+SELECT cat, FLOOR( torrentinfo.date / @bin_size )*@bin_size AS `date` , SUM( size ) AS size
+FROM `torrentinfo`
+WHERE cat = 203 OR cat = 202
+GROUP BY FLOOR( torrentinfo.date / @bin_size ), torrentinfo.cat
+ORDER BY torrentinfo.cat ASC, date ASC;</query>
+        </mx:request>
+    </mx:HTTPService>
+    
+
+
+
+</mx:Application>
