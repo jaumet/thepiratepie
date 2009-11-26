@@ -32,17 +32,25 @@ package includes
 			//Application.application.bytesRequest.send();
 			Application.application.progressBar.visible = true;
 			
-			this.receiveWizardData(null);
+			//this.receiveWizardData(null);
 			
 			this.draw();
 		}
 		
-		public function receiveWizardData(e:ResultEvent):void {
+		public function receiveWizardData(e:ResultEvent):void
+		{
 			
-			//var sampleRows:Array = String(e.result).split("\n");
+			while(this.numChildren > 0)
+			{
+				this.removeChildAt(0);
+			}
 			
-			var pirateData = new PirateData();
-			var sampleRows:Array = pirateData.csvString.split("\n");
+			trace("numChildren after removal: ", this.numChildren);
+			
+			var sampleRows:Array = String(e.result).split("\n");
+			
+			//var pirateData = new PirateData();
+			//var sampleRows:Array = pirateData.csvString.split("\n");
 	
 	
 			var bytesSums:Array = new Array();
@@ -128,13 +136,32 @@ package includes
 			
 			this.draw();
 			
+			Application.application.startTimeLabel.text = this.unix2date(this.startTime);
+			Application.application.endTimeLabel.text   = this.unix2date(this.endTime);
+			Application.application.topValueLabel.text  = String(Math.floor(this.top)) + " GB";
+			Application.application.bottomValueLabel.text="0 GB";
 			Application.application.progressBar.visible = false;
 	
 	
 		}
 		
+		private function unix2date(timestamp_in_seconds:Number):String
+		{
+			//unix timestamp -> human date
+			var currDate:Date = new Date(timestamp_in_seconds*1000); //timestamp_in_seconds*1000 - if you use a result of PHP time function, which returns it in seconds, and Flash uses milliseconds
+			    
+			var D:Number = currDate.getDate();
+			var M:Number = currDate.getMonth()+ 1; //because Returns the month (0 for January, 1 for February, and so on)
+			var Y:Number = currDate.getFullYear();
+			
+			return String(D + "." + M + "." + Y);
+		}
+		
 		public function getMaxHeight():Number
 		{
+			if(this.numChildren < 1)
+				return 1.0;
+			
 			var max:Number = 0.0;
 			
 			for(var c:int = 0; c < this.numChildren; c++)
